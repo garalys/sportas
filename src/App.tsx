@@ -15,6 +15,7 @@ import { Cardio } from './pages/Cardio';
 import { Measurements } from './pages/Measurements';
 import { FoodDiary } from './pages/FoodDiary';
 import { FoodPhoto } from './pages/FoodPhoto';
+import { Recipes } from './pages/Recipes';
 import { TrainerDashboard } from './pages/TrainerDashboard';
 import { ClientProgress } from './pages/ClientProgress';
 import { Settings } from './pages/Settings';
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/measurements" element={<Measurements />} />
           <Route path="/food" element={<FoodDiary />} />
           <Route path="/food/photo" element={<FoodPhoto />} />
+          <Route path="/food/recipes" element={<Recipes />} />
           <Route path="/profile" element={<Settings />} />
 
           {/* Trainer-only */}

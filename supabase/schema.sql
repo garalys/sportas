@@ -156,6 +156,15 @@ create table if not exists public.food_photos (
   created_at   timestamptz not null default now()
 );
 
+-- food_recipes : reusable meals/templates (items stored as a JSONB array)
+create table if not exists public.food_recipes (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references public.profiles (id) on delete cascade,
+  name       text not null,
+  items      jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 -- Late FK so food_entries can reference a photo
 do $$ begin
   alter table public.food_entries
@@ -170,6 +179,7 @@ create index if not exists idx_sets_session            on public.workout_sets (s
 create index if not exists idx_cardio_user_date        on public.cardio_sessions (user_id, date);
 create index if not exists idx_measure_user_date       on public.body_measurements (user_id, date);
 create index if not exists idx_food_user_date          on public.food_entries (user_id, date);
+create index if not exists idx_recipes_user            on public.food_recipes (user_id);
 create index if not exists idx_routine_ex_routine      on public.routine_exercises (routine_id);
 create index if not exists idx_trainer_clients_trainer on public.trainer_clients (trainer_id);
 create index if not exists idx_trainer_clients_client  on public.trainer_clients (client_id);
@@ -284,6 +294,7 @@ alter table public.cardio_sessions   enable row level security;
 alter table public.body_measurements enable row level security;
 alter table public.food_entries      enable row level security;
 alter table public.food_photos       enable row level security;
+alter table public.food_recipes      enable row level security;
 
 -- ---- profiles --------------------------------------------------------------
 drop policy if exists "profiles_select_own_or_client" on public.profiles;
@@ -378,6 +389,14 @@ create policy "photos_owner_all" on public.food_photos
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "photos_trainer_read" on public.food_photos;
 create policy "photos_trainer_read" on public.food_photos
+  for select using (public.is_trainer_of(user_id));
+
+-- food_recipes
+drop policy if exists "recipes_owner_all" on public.food_recipes;
+create policy "recipes_owner_all" on public.food_recipes
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "recipes_trainer_read" on public.food_recipes;
+create policy "recipes_trainer_read" on public.food_recipes
   for select using (public.is_trainer_of(user_id));
 
 -- -----------------------------------------------------------------------------

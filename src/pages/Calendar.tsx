@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -35,6 +35,7 @@ export function Calendar() {
   const [type, setType] = useState<SessionType>('gym');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const days = useMemo(() => monthGridDays(month), [month]);
 
@@ -67,16 +68,35 @@ export function Calendar() {
 
   const selectedSessions = selected ? byDay.get(selected) ?? [] : [];
 
-  async function addSession() {
+  function editSession(s: WorkoutSession) {
+    setEditingId(s.id);
+    setType(s.type);
+    setNotes(s.notes ?? '');
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setType('gym');
+    setNotes('');
+  }
+
+  async function saveSession() {
     if (!user || !selected) return;
     setSaving(true);
-    await supabase.from('workout_sessions').insert({
-      user_id: user.id,
-      date: selected,
-      type,
-      notes: notes || null,
-    });
-    setNotes('');
+    if (editingId) {
+      await supabase
+        .from('workout_sessions')
+        .update({ type, notes: notes || null })
+        .eq('id', editingId);
+    } else {
+      await supabase.from('workout_sessions').insert({
+        user_id: user.id,
+        date: selected,
+        type,
+        notes: notes || null,
+      });
+    }
+    resetForm();
     setSaving(false);
     await load();
   }
@@ -127,6 +147,8 @@ export function Calendar() {
                 onClick={() => {
                   setSelected(key);
                   setType('gym');
+                  setNotes('');
+                  setEditingId(null);
                 }}
                 className={cn(
                   'flex aspect-square flex-col items-center justify-start rounded-xl p-1 text-sm transition',
@@ -162,7 +184,10 @@ export function Calendar() {
 
       <Sheet
         open={selected !== null}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          setSelected(null);
+          resetForm();
+        }}
         title={selected ? prettyDate(toDateKey(fromDateKey(selected))) : ''}
       >
         <div className="space-y-4">
@@ -171,25 +196,50 @@ export function Calendar() {
               {selectedSessions.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
+                  className={cn(
+                    'flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2',
+                    editingId === s.id && 'ring-2 ring-brand-300',
+                  )}
                 >
-                  <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => editSession(s)}
+                    className="flex flex-1 items-center gap-2 text-left"
+                  >
                     <span className={cn('h-2.5 w-2.5 rounded-full', SESSION_TYPE_COLORS[s.type])} />
                     <div>
                       <p className="text-sm font-medium">{t(`sessionType.${s.type}`)}</p>
                       {s.notes && <p className="text-xs text-slate-500">{s.notes}</p>}
                     </div>
-                  </div>
-                  <button
-                    onClick={() => removeSession(s.id)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-600"
-                  >
-                    <Trash2 size={16} />
                   </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => editSession(s)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={() => removeSession(s.id)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-red-600"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
+
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+            <span className="text-sm font-semibold text-slate-600">
+              {editingId ? t('cal.editSession') : t('cal.addSession')}
+            </span>
+            {editingId && (
+              <button onClick={resetForm} className="text-xs font-medium text-brand-600">
+                {t('cal.newSession')}
+              </button>
+            )}
+          </div>
 
           <Field label={t('cal.trainingType')}>
             <Select value={type} onChange={(e) => setType(e.target.value as SessionType)}>
@@ -208,8 +258,16 @@ export function Calendar() {
             />
           </Field>
 
-          <Button fullWidth loading={saving} onClick={addSession}>
-            <Plus size={18} /> {t('cal.addSession')}
+          <Button fullWidth loading={saving} onClick={saveSession}>
+            {editingId ? (
+              <>
+                <Check size={18} /> {t('common.saveChanges')}
+              </>
+            ) : (
+              <>
+                <Plus size={18} /> {t('cal.addSession')}
+              </>
+            )}
           </Button>
 
           {type === 'gym' && (

@@ -22,6 +22,8 @@ const en: Dict = {
   'common.notesOptional': 'Notes (optional)',
   'common.date': 'Date',
   'common.description': 'Description (optional)',
+  'common.saveChanges': 'Save changes',
+  'chart.noData': 'No data yet',
 
   // units
   'units.sessions': 'sessions',
@@ -97,6 +99,8 @@ const en: Dict = {
   'cal.addSession': 'Add session',
   'cal.howDidItGo': 'How did it go?',
   'cal.gymTip': 'Tip: log exercises from Workouts to track sets & reps.',
+  'cal.editSession': 'Edit session',
+  'cal.newSession': 'Log another session',
 
   // session types
   'sessionType.gym': 'Gym',
@@ -193,6 +197,10 @@ const en: Dict = {
   'meas.arm': 'Arm',
   'meas.wrist': 'Wrist',
   'meas.hips': 'Hips',
+  'meas.daily': 'Daily',
+  'meas.weekly': 'Weekly',
+  'meas.trend': 'Trend',
+  'meas.noChange': 'No change',
 
   // food diary
   'food.title': 'Food diary',
@@ -213,6 +221,28 @@ const en: Dict = {
   'food.carbsG': 'Carbs (g)',
   'food.fatG': 'Fat (g)',
   'food.addToDiary': 'Add to diary',
+  'food.editFood': 'Edit food',
+  'food.fromRecipe': 'From recipe',
+  'food.recipes': 'Recipes',
+  'food.manageRecipes': 'Manage recipes',
+  'food.chooseRecipe': 'Tap a recipe to add it to this day',
+  'food.noRecipesYet': 'No recipes yet.',
+  'recipe.title': 'Recipes',
+  'recipe.subtitle': 'Reusable meals you can add in one tap',
+  'recipe.new': 'New recipe',
+  'recipe.edit': 'Edit recipe',
+  'recipe.name': 'Recipe name',
+  'recipe.namePlaceholder': 'Chicken & rice bowl',
+  'recipe.items': 'Items',
+  'recipe.addItem': 'Add item',
+  'recipe.noRecipes': 'No recipes yet',
+  'recipe.noRecipesDesc': 'Create a recipe to quickly log meals you eat often.',
+  'recipe.create': 'Create recipe',
+  'recipe.save': 'Save recipe',
+  'recipe.itemsOne': '{count} item · {kcal} kcal',
+  'recipe.itemsMany': '{count} items · {kcal} kcal',
+  'recipe.addToDiary': 'Add to diary',
+  'recipe.empty': 'Add at least one item.',
 
   // food photo
   'photo.title': 'Photo scan',
@@ -288,6 +318,8 @@ const lt: Dict = {
   'common.notesOptional': 'Pastabos (nebūtina)',
   'common.date': 'Data',
   'common.description': 'Aprašymas (nebūtina)',
+  'common.saveChanges': 'Išsaugoti pakeitimus',
+  'chart.noData': 'Kol kas nėra duomenų',
 
   // units
   'units.sessions': 'treniruotės',
@@ -363,6 +395,8 @@ const lt: Dict = {
   'cal.addSession': 'Pridėti treniruotę',
   'cal.howDidItGo': 'Kaip sekėsi?',
   'cal.gymTip': 'Patarimas: įrašykite pratimus skiltyje Treniruotės, kad sektumėte serijas ir pakartojimus.',
+  'cal.editSession': 'Redaguoti įrašą',
+  'cal.newSession': 'Pridėti dar vieną įrašą',
 
   // session types
   'sessionType.gym': 'Sporto salė',
@@ -459,6 +493,10 @@ const lt: Dict = {
   'meas.arm': 'Ranka',
   'meas.wrist': 'Riešas',
   'meas.hips': 'Klubai',
+  'meas.daily': 'Kasdien',
+  'meas.weekly': 'Kas savaitę',
+  'meas.trend': 'Pokytis',
+  'meas.noChange': 'Be pokyčių',
 
   // food diary
   'food.title': 'Maisto dienoraštis',
@@ -479,6 +517,28 @@ const lt: Dict = {
   'food.carbsG': 'Angliavandeniai (g)',
   'food.fatG': 'Riebalai (g)',
   'food.addToDiary': 'Pridėti į dienoraštį',
+  'food.editFood': 'Redaguoti maistą',
+  'food.fromRecipe': 'Iš recepto',
+  'food.recipes': 'Receptai',
+  'food.manageRecipes': 'Tvarkyti receptus',
+  'food.chooseRecipe': 'Bakstelėkite receptą, kad pridėtumėte jį šiai dienai',
+  'food.noRecipesYet': 'Receptų dar nėra.',
+  'recipe.title': 'Receptai',
+  'recipe.subtitle': 'Pakartotinai naudojami patiekalai, pridedami vienu paspaudimu',
+  'recipe.new': 'Naujas receptas',
+  'recipe.edit': 'Redaguoti receptą',
+  'recipe.name': 'Recepto pavadinimas',
+  'recipe.namePlaceholder': 'Vištiena su ryžiais',
+  'recipe.items': 'Produktai',
+  'recipe.addItem': 'Pridėti produktą',
+  'recipe.noRecipes': 'Receptų dar nėra',
+  'recipe.noRecipesDesc': 'Sukurkite receptą, kad greitai įrašytumėte dažnai valgomus patiekalus.',
+  'recipe.create': 'Sukurti receptą',
+  'recipe.save': 'Išsaugoti receptą',
+  'recipe.itemsOne': '{count} produktas · {kcal} kcal',
+  'recipe.itemsMany': '{count} produktų · {kcal} kcal',
+  'recipe.addToDiary': 'Pridėti į dienoraštį',
+  'recipe.empty': 'Pridėkite bent vieną produktą.',
 
   // food photo
   'photo.title': 'Nuotraukos skenavimas',

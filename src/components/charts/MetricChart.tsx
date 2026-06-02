@@ -18,15 +18,17 @@ export function MetricChart({
   data,
   color = '#4f46e5',
   unit = '',
+  emptyLabel = 'No data yet',
 }: {
   data: MetricPoint[];
   color?: string;
   unit?: string;
+  emptyLabel?: string;
 }) {
   if (data.length === 0) {
     return (
       <div className="flex h-40 items-center justify-center text-sm text-slate-400">
-        No data yet
+        {emptyLabel}
       </div>
     );
   }

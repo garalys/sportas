@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Ruler, Trash2 } from 'lucide-react';
+import { Plus, Ruler, Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { startOfWeek, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -10,7 +11,7 @@ import { Field, Input } from '../components/ui/Field';
 import { EmptyState, Spinner } from '../components/ui/Misc';
 import { MetricChart, type MetricPoint } from '../components/charts/MetricChart';
 import { cn } from '../utils/cn';
-import { prettyDateShort, todayKey } from '../utils/date';
+import { prettyDateShort, todayKey, toDateKey } from '../utils/date';
 import { useI18n } from '../i18n/I18nProvider';
 import type { BodyMeasurement } from '../types';
 
@@ -45,6 +46,7 @@ export function Measurements() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [metric, setMetric] = useState<MetricKey>('weight_kg');
+  const [period, setPeriod] = useState<'daily' | 'weekly'>('daily');
   const [form, setForm] = useState<Record<string, string>>(emptyForm());
 
   async function load() {
@@ -85,11 +87,36 @@ export function Measurements() {
     await load();
   }
 
-  const chartData: MetricPoint[] = useMemo(() => {
+  const dailyData: MetricPoint[] = useMemo(() => {
     return (items ?? [])
       .filter((m) => m[metric] != null)
       .map((m) => ({ date: m.date, value: Number(m[metric]) }));
   }, [items, metric]);
+
+  // Weekly view: average each ISO week (Mon-based), keyed by the week's start.
+  const chartData: MetricPoint[] = useMemo(() => {
+    if (period === 'daily') return dailyData;
+    const weeks = new Map<string, number[]>();
+    for (const p of dailyData) {
+      const wk = toDateKey(startOfWeek(parseISO(p.date), { weekStartsOn: 1 }));
+      const arr = weeks.get(wk) ?? [];
+      arr.push(p.value);
+      weeks.set(wk, arr);
+    }
+    return [...weeks.entries()]
+      .map(([date, vals]) => ({
+        date,
+        value: Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [dailyData, period]);
+
+  // Net change across the visible range (last − first).
+  const trend = useMemo(() => {
+    if (chartData.length < 2) return null;
+    const delta = chartData[chartData.length - 1].value - chartData[0].value;
+    return Math.round(delta * 10) / 10;
+  }, [chartData]);
 
   const activeMetric = METRICS.find((m) => m.key === metric)!;
   const latest = items && items.length ? items[items.length - 1] : null;
@@ -124,6 +151,23 @@ export function Measurements() {
               title={t('meas.progress')}
               subtitle={t('meas.overTime', { metric: t(activeMetric.labelKey) })}
             />
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="flex rounded-xl bg-slate-100 p-0.5">
+                {(['daily', 'weekly'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={cn(
+                      'rounded-lg px-3 py-1 text-xs font-medium transition',
+                      period === p ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500',
+                    )}
+                  >
+                    {t(p === 'daily' ? 'meas.daily' : 'meas.weekly')}
+                  </button>
+                ))}
+              </div>
+              <TrendBadge trend={trend} unit={activeMetric.unit} noChangeLabel={t('meas.noChange')} />
+            </div>
             <div className="mb-3 flex flex-wrap gap-2">
               {METRICS.map((m) => (
                 <button
@@ -140,7 +184,12 @@ export function Measurements() {
                 </button>
               ))}
             </div>
-            <MetricChart data={chartData} color={activeMetric.color} unit={activeMetric.unit} />
+            <MetricChart
+              data={chartData}
+              color={activeMetric.color}
+              unit={activeMetric.unit}
+              emptyLabel={t('chart.noData')}
+            />
           </Card>
 
           {latest && (
@@ -225,5 +274,36 @@ export function Measurements() {
         </div>
       </Sheet>
     </div>
+  );
+}
+
+function TrendBadge({
+  trend,
+  unit,
+  noChangeLabel,
+}: {
+  trend: number | null;
+  unit: string;
+  noChangeLabel: string;
+}) {
+  if (trend === null) return null;
+  if (trend === 0)
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+        <Minus size={13} /> {noChangeLabel}
+      </span>
+    );
+  const down = trend < 0;
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold',
+        down ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600',
+      )}
+    >
+      {down ? <TrendingDown size={13} /> : <TrendingUp size={13} />}
+      {trend > 0 ? '+' : ''}
+      {trend} {unit}
+    </span>
   );
 }

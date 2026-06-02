@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Camera, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Camera, Trash2, Pencil, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -12,7 +12,7 @@ import { Field, Input, Select } from '../components/ui/Field';
 import { Spinner } from '../components/ui/Misc';
 import { toDateKey, fromDateKey, prettyDate } from '../utils/date';
 import { sum } from '../utils/format';
-import { MEAL_ORDER, type MealType, type FoodEntry } from '../types';
+import { MEAL_ORDER, type MealType, type FoodEntry, type FoodRecipe } from '../types';
 import { useI18n } from '../i18n/I18nProvider';
 
 const emptyForm = () => ({
@@ -31,8 +31,15 @@ export function FoodDiary() {
   const [date, setDate] = useState(toDateKey());
   const [items, setItems] = useState<FoodEntry[] | null>(null);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<FoodEntry | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm());
+
+  // recipes ("from recipe" quick-add)
+  const [recipes, setRecipes] = useState<FoodRecipe[]>([]);
+  const [recipeOpen, setRecipeOpen] = useState(false);
+  const [recipeMeal, setRecipeMeal] = useState<MealType>('lunch');
+  const [insertingId, setInsertingId] = useState<string | null>(null);
 
   async function load() {
     if (!user) return;
@@ -46,17 +53,50 @@ export function FoodDiary() {
     setItems((data as FoodEntry[]) ?? []);
   }
 
+  async function loadRecipes() {
+    if (!user) return;
+    const { data } = await supabase
+      .from('food_recipes')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    setRecipes((data as FoodRecipe[]) ?? []);
+  }
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, date]);
 
+  useEffect(() => {
+    loadRecipes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  function openAdd() {
+    setEditing(null);
+    setForm(emptyForm());
+    setOpen(true);
+  }
+
+  function openEdit(f: FoodEntry) {
+    setEditing(f);
+    setForm({
+      meal_type: f.meal_type,
+      name: f.name,
+      quantity: f.quantity ?? '',
+      calories: f.calories?.toString() ?? '',
+      protein: f.protein?.toString() ?? '',
+      carbs: f.carbs?.toString() ?? '',
+      fat: f.fat?.toString() ?? '',
+    });
+    setOpen(true);
+  }
+
   async function save() {
     if (!user || !form.name.trim()) return;
     setSaving(true);
-    await supabase.from('food_entries').insert({
-      user_id: user.id,
-      date,
+    const payload = {
       meal_type: form.meal_type,
       name: form.name.trim(),
       quantity: form.quantity.trim() || null,
@@ -64,7 +104,12 @@ export function FoodDiary() {
       protein: form.protein ? Number(form.protein) : null,
       carbs: form.carbs ? Number(form.carbs) : null,
       fat: form.fat ? Number(form.fat) : null,
-    });
+    };
+    if (editing) {
+      await supabase.from('food_entries').update(payload).eq('id', editing.id);
+    } else {
+      await supabase.from('food_entries').insert({ ...payload, user_id: user.id, date });
+    }
     setForm(emptyForm());
     setSaving(false);
     setOpen(false);
@@ -73,6 +118,28 @@ export function FoodDiary() {
 
   async function remove(id: string) {
     await supabase.from('food_entries').delete().eq('id', id);
+    await load();
+  }
+
+  async function insertRecipe(r: FoodRecipe) {
+    if (!user || !r.items?.length) return;
+    setInsertingId(r.id);
+    const rows = r.items
+      .filter((it) => it.name?.trim())
+      .map((it) => ({
+        user_id: user.id,
+        date,
+        meal_type: recipeMeal,
+        name: it.name.trim(),
+        quantity: it.quantity ?? null,
+        calories: it.calories ?? null,
+        protein: it.protein ?? null,
+        carbs: it.carbs ?? null,
+        fat: it.fat ?? null,
+      }));
+    await supabase.from('food_entries').insert(rows);
+    setInsertingId(null);
+    setRecipeOpen(false);
     await load();
   }
 
@@ -125,9 +192,14 @@ export function FoodDiary() {
         </div>
       </Card>
 
-      <Button fullWidth onClick={() => setOpen(true)} className="mb-4">
-        <Plus size={18} /> {t('food.addFood')}
-      </Button>
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <Button fullWidth onClick={openAdd}>
+          <Plus size={18} /> {t('food.addFood')}
+        </Button>
+        <Button variant="secondary" fullWidth onClick={() => setRecipeOpen(true)}>
+          <BookOpen size={18} /> {t('food.fromRecipe')}
+        </Button>
+      </div>
 
       {!items ? (
         <div className="flex justify-center py-10">
@@ -150,8 +222,8 @@ export function FoodDiary() {
                 <div className="space-y-2">
                   {meals.map((f) => (
                     <Card key={f.id} className="flex items-center justify-between !p-3">
-                      <div>
-                        <p className="font-medium">{f.name}</p>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{f.name}</p>
                         <p className="text-xs text-slate-500">
                           {f.quantity ? `${f.quantity} · ` : ''}
                           {f.calories ? `${Math.round(f.calories)} ${t('units.kcal')}` : ''}
@@ -160,12 +232,20 @@ export function FoodDiary() {
                           {f.fat ? ` F${f.fat}` : ''}
                         </p>
                       </div>
-                      <button
-                        onClick={() => remove(f.id)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          onClick={() => openEdit(f)}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => remove(f.id)}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </Card>
                   ))}
                 </div>
@@ -178,7 +258,7 @@ export function FoodDiary() {
         </div>
       )}
 
-      <Sheet open={open} onClose={() => setOpen(false)} title={t('food.addFood')}>
+      <Sheet open={open} onClose={() => setOpen(false)} title={editing ? t('food.editFood') : t('food.addFood')}>
         <div className="space-y-4">
           <Field label={t('food.meal')}>
             <Select
@@ -241,8 +321,59 @@ export function FoodDiary() {
             </Field>
           </div>
           <Button fullWidth loading={saving} onClick={save} disabled={!form.name.trim()}>
-            {t('food.addToDiary')}
+            {editing ? t('common.saveChanges') : t('food.addToDiary')}
           </Button>
+        </div>
+      </Sheet>
+
+      <Sheet open={recipeOpen} onClose={() => setRecipeOpen(false)} title={t('food.fromRecipe')}>
+        <div className="space-y-4">
+          <Field label={t('food.meal')}>
+            <Select
+              value={recipeMeal}
+              onChange={(e) => setRecipeMeal(e.target.value as MealType)}
+            >
+              {MEAL_ORDER.map((m) => (
+                <option key={m} value={m}>
+                  {t(`mealType.${m}`)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          {recipes.length === 0 ? (
+            <p className="py-4 text-center text-sm text-slate-400">{t('food.noRecipesYet')}</p>
+          ) : (
+            <>
+              <p className="text-xs text-slate-400">{t('food.chooseRecipe')}</p>
+              <div className="space-y-2">
+                {recipes.map((r) => {
+                  const kcal = Math.round(sum(r.items?.map((i) => i.calories) ?? []));
+                  const count = r.items?.length ?? 0;
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => insertRecipe(r)}
+                      disabled={insertingId !== null}
+                      className="flex w-full items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-left hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      <div>
+                        <p className="font-medium">{r.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {t(count === 1 ? 'recipe.itemsOne' : 'recipe.itemsMany', { count, kcal })}
+                        </p>
+                      </div>
+                      <Plus size={18} className="text-brand-600" />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <Link to="/food/recipes" className="btn-secondary w-full">
+            <BookOpen size={18} /> {t('food.manageRecipes')}
+          </Link>
         </div>
       </Sheet>
     </div>

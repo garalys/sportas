@@ -128,13 +128,17 @@ export function Workouts() {
           </h2>
           <div className="space-y-2">
             {history.map((h) => (
-              <div
+              <Link
                 key={h.id}
-                className="flex items-center justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100"
+                to={`/workout/${h.id}`}
+                className="flex items-center justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-slate-100 transition hover:ring-brand-200"
               >
                 <span className="text-sm font-medium">{t(`sessionType.${h.type}`)}</span>
-                <span className="text-sm text-slate-500">{prettyDate(h.date)}</span>
-              </div>
+                <span className="flex items-center gap-1 text-sm text-slate-500">
+                  {prettyDate(h.date)}
+                  <ChevronRight size={16} className="text-slate-400" />
+                </span>
+              </Link>
             ))}
           </div>
         </div>

@@ -120,6 +120,24 @@ export type DetectedFood = {
   fat?: number;
 };
 
+// A single food item stored inside a reusable recipe (JSONB array).
+export type RecipeItem = {
+  name: string;
+  quantity?: string | null;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+};
+
+export type FoodRecipe = {
+  id: string;
+  user_id: string;
+  name: string;
+  items: RecipeItem[];
+  created_at: string;
+};
+
 export type FoodPhoto = {
   id: string;
   user_id: string;
@@ -154,6 +172,7 @@ export type Database = {
       body_measurements: TableShape<BodyMeasurement>;
       food_entries: TableShape<FoodEntry>;
       food_photos: TableShape<FoodPhoto>;
+      food_recipes: TableShape<FoodRecipe>;
     };
     Views: Record<string, never>;
     Functions: {
