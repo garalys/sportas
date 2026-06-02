@@ -63,10 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      // IMPORTANT: this callback runs while Supabase holds its internal auth
+      // lock. Calling another Supabase function here (e.g. loadProfile) would
+      // try to re-acquire that lock and DEADLOCK — every later query then hangs
+      // forever (the infinite spinner, worst on Safari's Web Locks). Defer the
+      // profile fetch out of the lock with setTimeout(0).
       if (newSession?.user) {
-        await loadProfile(newSession.user.id);
+        const uid = newSession.user.id;
+        setTimeout(() => {
+          void loadProfile(uid);
+        }, 0);
       } else {
         setProfile(null);
       }
