@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Dumbbell } from 'lucide-react';
+import { Dumbbell, Check, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
 import { Field, Input, Select } from '../components/ui/Field';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useI18n } from '../i18n/I18nProvider';
+import { cn } from '../utils/cn';
 import type { UserRole } from '../types';
+
+const PASSWORD_RULES: { key: string; labelKey: string; test: (pw: string) => boolean }[] = [
+  { key: 'length', labelKey: 'auth.register.pwLength', test: (pw) => pw.length >= 8 },
+  { key: 'upper', labelKey: 'auth.register.pwUpper', test: (pw) => /[A-Z]/.test(pw) },
+  { key: 'lower', labelKey: 'auth.register.pwLower', test: (pw) => /[a-z]/.test(pw) },
+  { key: 'number', labelKey: 'auth.register.pwNumber', test: (pw) => /[0-9]/.test(pw) },
+  { key: 'symbol', labelKey: 'auth.register.pwSymbol', test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+];
 
 export function Register() {
   const { signUp } = useAuth();
@@ -20,10 +29,17 @@ export function Register() {
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const checks = PASSWORD_RULES.map((r) => ({ ...r, met: r.test(password) }));
+  const passwordValid = checks.every((c) => c.met);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setInfo(null);
+    if (!passwordValid) {
+      setError(t('auth.register.pwWeak'));
+      return;
+    }
     setLoading(true);
     try {
       const { needsConfirmation } = await signUp({ email, password, fullName, role });
@@ -76,12 +92,33 @@ export function Register() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t('auth.register.passwordHint')}
           />
         </Field>
+
+        <ul className="-mt-1 space-y-1.5">
+          {checks.map((c) => (
+            <li
+              key={c.key}
+              className={cn(
+                'flex items-center gap-2 text-sm transition-colors',
+                c.met ? 'text-emerald-600' : 'text-slate-400',
+              )}
+            >
+              <span
+                className={cn(
+                  'flex h-4 w-4 items-center justify-center rounded-full',
+                  c.met ? 'bg-emerald-100' : 'bg-slate-100',
+                )}
+              >
+                {c.met ? <Check size={12} /> : <X size={12} />}
+              </span>
+              {t(c.labelKey)}
+            </li>
+          ))}
+        </ul>
         <Field label={t('auth.register.iAmA')}>
           <Select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
             <option value="client">{t('auth.register.client')}</option>
@@ -92,7 +129,7 @@ export function Register() {
         {error && <p className="text-sm text-red-600">{error}</p>}
         {info && <p className="text-sm text-emerald-600">{info}</p>}
 
-        <Button type="submit" fullWidth loading={loading}>
+        <Button type="submit" fullWidth loading={loading} disabled={!passwordValid}>
           {t('auth.register.create')}
         </Button>
       </form>
